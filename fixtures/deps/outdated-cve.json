@@ -1,0 +1,11 @@
+{
+  "_comment": "Pacotes REAIS e legítimos, porém em versões antigas com CVE conhecido. Servem para o scanner de SCA/SBOM (trivy, osv-scanner) ter o que encontrar. São seguros de instalar (são reais), mas aqui ficam como DADO; a instalação real é opcional e controlada.",
+  "dependencies": [
+    { "name": "lodash",       "version": "4.17.11", "cve": "CVE-2019-10744", "issue": "Prototype pollution em defaultsDeep" },
+    { "name": "minimist",     "version": "1.2.0",   "cve": "CVE-2020-7598",  "issue": "Prototype pollution" },
+    { "name": "axios",        "version": "0.21.0",  "cve": "CVE-2020-28168", "issue": "SSRF via bypass de proxy em redirect" },
+    { "name": "node-forge",   "version": "0.10.0",  "cve": "CVE-2022-24771", "issue": "Verificação de assinatura RSA-PKCS1 falha" },
+    { "name": "jsonwebtoken", "version": "8.5.0",   "cve": "CVE-2022-23540", "issue": "Verificação de assinatura insegura por padrão" },
+    { "name": "marked",       "version": "0.3.6",   "cve": "CVE-2017-1000427", "issue": "XSS / ReDoS no parser de Markdown" }
+  ]
+}

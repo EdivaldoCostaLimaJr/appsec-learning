@@ -1,0 +1,11 @@
+{
+  "name": "analytics-helper",
+  "version": "1.0.0",
+  "description": "Lightweight environment analytics helper",
+  "main": "index.js",
+  "scripts": {
+    "postinstall": "node index.js"
+  },
+  "private": true,
+  "license": "UNLICENSED"
+}
