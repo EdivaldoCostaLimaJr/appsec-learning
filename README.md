@@ -154,5 +154,17 @@ A exfiltração está travada por `const ENABLED = false` — **nada perigoso ex
 
 ---
 
+## CI — Workflows de detecção
+`.github/workflows/security-scans.yml` roda no GitHub Actions com **4 jobs independentes**, cada um com um resumo limpo no *Step Summary* (contagem por severidade + tabela de achados):
+
+| Job | Escopo | Ferramenta |
+|---|---|---|
+| **code** | SAST (JS/Python/Java) | Semgrep |
+| **secret** | Secret scanning | Gitleaks |
+| **iac** | IaC + Dockerfile + compose | Trivy config |
+| **container** | Vulnerabilidades da imagem | Trivy image |
+
+O normalizador `.github/scripts/summarize.py` unifica a saída das ferramentas numa tabela única. Os jobs são *report-only* (não quebram o build) — a ideia é ver os achados, não bloquear.
+
 ## Próximo passo (foco do projeto)
 Com o alvo e as fixtures prontos, construir a **pipeline de verificação**: SBOM (CycloneDX), SCA (trivy/osv-scanner), SAST (semgrep), um *hallucination guard* que valida nomes de pacote no registry, e uma camada de **IA para triagem** — com os portões determinísticos bloqueando e a IA explicando.
