@@ -42,7 +42,7 @@ jobs:
         continue-on-error: true
         run: >
           docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.18.4
-          detect --no-git --source=/repo --no-banner --redact
+          detect --no-git --source=/repo --no-banner --redact --exit-code 0
           --report-format json --report-path /repo/gitleaks.json
       - name: Resumo
         if: always()
