@@ -23,7 +23,11 @@ jobs:
         run: python -m pip install --quiet semgrep
       - name: Rodar Semgrep
         continue-on-error: true
-        run: semgrep scan --config=auto --metrics=off --json --output semgrep.json .
+        run: >
+          semgrep scan
+          --config p/default --config p/security-audit --config p/owasp-top-ten
+          --config p/javascript --config p/python --config p/java
+          --metrics=off --json --output semgrep.json .
       - name: Resumo
         if: always()
         run: python3 .github/scripts/summarize.py --tool semgrep --input semgrep.json --summary "$GITHUB_STEP_SUMMARY"
@@ -34,16 +38,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Instalar Gitleaks
-        run: |
-          VER=8.18.4
-          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_x64.tar.gz" | tar -xz gitleaks
-          sudo mv gitleaks /usr/local/bin/
       - name: Rodar Gitleaks
         continue-on-error: true
-        run: gitleaks detect --source . --no-banner --redact --report-format json --report-path gitleaks.json
+        run: >
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.18.4
+          detect --no-git --source=/repo --no-banner --redact --exit-code 0
+          --report-format json --report-path /repo/gitleaks.json
       - name: Resumo
         if: always()
         run: python3 .github/scripts/summarize.py --tool gitleaks --input gitleaks.json --summary "$GITHUB_STEP_SUMMARY"
@@ -55,7 +55,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Instalar Trivy
-        run: curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/v0.52.2/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.52.2
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg >/dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
       - name: Rodar Trivy (config/misconfig)
         continue-on-error: true
         run: trivy config --format json --output trivy-config.json .
@@ -70,7 +76,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Instalar Trivy
-        run: curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/v0.52.2/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.52.2
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg >/dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
       - name: Build da imagem
         run: docker build -t appvuln:ci -f app-vuln/Dockerfile .
       - name: Rodar Trivy (image scan)
