@@ -9,7 +9,7 @@ import json
 import sys
 from collections import Counter
 
-SEV_ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "WARNING", "ERROR", "INFO", "UNKNOWN"]
+SEV_ORDER = ["CRITICAL", "HIGH", "ERROR", "MEDIUM", "WARNING", "LOW", "INFO", "UNKNOWN"]
 SEV_EMOJI = {"CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🔵",
              "WARNING": "🟡", "ERROR": "🟠", "INFO": "⚪", "UNKNOWN": "⚪"}
 
