@@ -1,0 +1,12 @@
+node_modules/
+*.db
+*.db-journal
+.env
+data-vuln.db
+__pycache__/
+*.pyc
+target/
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl

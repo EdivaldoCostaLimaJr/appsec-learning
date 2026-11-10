@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gestão — AppSec Learning</title>
+  <style>
+    :root { --bg:#f4f6f9; --card:#fff; --line:#e2e6ec; --brand:#2a5bd7; --muted:#6b7280; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; background: var(--bg); color: #1f2430; }
+    header { background: var(--brand); color: #fff; padding: .8rem 1.2rem; display: flex; align-items: center; gap: 1rem; }
+    header h1 { font-size: 1.1rem; margin: 0; flex: 1; }
+    header .who { font-size: .85rem; opacity: .9; }
+    header button { background: rgba(255,255,255,.2); color: #fff; border: 0; padding: .4rem .7rem; border-radius: 6px; cursor: pointer; }
+    main { max-width: 960px; margin: 1.2rem auto; padding: 0 1rem; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.2rem; }
+    h2 { font-size: 1rem; margin: 0 0 .8rem; }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    th, td { text-align: left; padding: .5rem .4rem; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 600; }
+    .tag { font-size: .72rem; padding: .1rem .5rem; border-radius: 999px; background: #eef2ff; color: var(--brand); }
+    .muted { color: var(--muted); font-size: .82rem; }
+    label { display: block; font-size: .82rem; margin: .5rem 0 .2rem; color: var(--muted); }
+    input, select { width: 100%; padding: .55rem; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+    button.primary { background: var(--brand); color: #fff; border: 0; padding: .6rem 1rem; border-radius: 6px; cursor: pointer; margin-top: .8rem; }
+    #login { max-width: 360px; margin: 3rem auto; }
+    #error { color: #b00020; font-size: .85rem; min-height: 1.1rem; }
+    .hidden { display: none; }
+    .project { border: 1px solid var(--line); border-radius: 8px; padding: .8rem; margin-bottom: .7rem; }
+    .project h3 { margin: 0 0 .2rem; font-size: .95rem; }
+  </style>
+</head>
+<body>
+  <header class="hidden" id="topbar">
+    <h1>Gestão de Projetos & Funcionários</h1>
+    <span class="who" id="who"></span>
+    <button id="logout">Sair</button>
+  </header>
+
+  <main>
+    <!-- Login -->
+    <div class="card" id="login">
+      <h2>Entrar</h2>
+      <label>E-mail</label>
+      <input id="email" type="email" value="ana@empresa.com" autocomplete="username">
+      <label>Senha</label>
+      <input id="password" type="password" value="Senha@123" autocomplete="current-password">
+      <button class="primary" id="btn-login">Entrar</button>
+      <p class="muted">Contas de teste: ana@ (admin), marcos@ (manager), bruno@ (employee). Senha: <code>Senha@123</code></p>
+      <p id="error"></p>
+    </div>
+
+    <!-- Painel -->
+    <div id="app" class="hidden">
+      <div class="card">
+        <h2>Funcionários</h2>
+        <table><thead><tr>
+          <th>Nome</th><th>Cargo</th><th>Departamento</th><th>Título</th><th>Salário</th>
+        </tr></thead><tbody id="emp-body"></tbody></table>
+        <p class="muted">O salário só aparece para admin, manager ou o próprio funcionário.</p>
+      </div>
+      <div class="card">
+        <h2>Projetos</h2>
+        <div id="proj-list"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const S = { token: localStorage.getItem('token') || null, me: null };
+    const $ = (id) => document.getElementById(id);
+    const fmtMoney = (v) => v == null ? '—' : 'R$ ' + Number(v).toLocaleString('pt-BR');
+
+    async function api(method, url, body) {
+      const res = await fetch(url, {
+        method,
+        headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(S.token ? { Authorization: 'Bearer ' + S.token } : {}) },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (res.status === 401) { logout(); throw new Error('sessão expirada'); }
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || res.statusText); }
+      return res.status === 204 ? null : res.json();
+    }
+
+    function setText(el, text) { el.textContent = text; } // textContent evita XSS
+
+    async function login() {
+      $('error').textContent = '';
+      try {
+        const data = await api('POST', '/api/auth/login', { email: $('email').value, password: $('password').value });
+        S.token = data.token; localStorage.setItem('token', data.token);
+        await boot();
+      } catch (e) { $('error').textContent = e.message; }
+    }
+
+    function logout() {
+      S.token = null; S.me = null; localStorage.removeItem('token');
+      $('app').classList.add('hidden'); $('topbar').classList.add('hidden'); $('login').classList.remove('hidden');
+    }
+
+    async function boot() {
+      S.me = await api('GET', '/api/auth/me');
+      $('login').classList.add('hidden'); $('app').classList.remove('hidden'); $('topbar').classList.remove('hidden');
+      setText($('who'), `${S.me.name} · ${S.me.role}`);
+      await Promise.all([loadEmployees(), loadProjects()]);
+    }
+
+    async function loadEmployees() {
+      const rows = await api('GET', '/api/employees');
+      const body = $('emp-body'); body.replaceChildren();
+      for (const e of rows) {
+        const tr = document.createElement('tr');
+        for (const val of [e.name, e.role, e.department, e.title, fmtMoney(e.salary)]) {
+          const td = document.createElement('td'); td.textContent = val; tr.append(td);
+        }
+        body.append(tr);
+      }
+    }
+
+    async function loadProjects() {
+      const rows = await api('GET', '/api/projects');
+      const list = $('proj-list'); list.replaceChildren();
+      for (const p of rows) {
+        const div = document.createElement('div'); div.className = 'project';
+        const h3 = document.createElement('h3'); h3.textContent = p.name; div.append(h3);
+        const meta = document.createElement('div'); meta.className = 'muted';
+        meta.textContent = `${p.status} · orçamento ${fmtMoney(p.budget)} · responsável ${p.manager ? p.manager.name : '—'}`;
+        div.append(meta);
+        const desc = document.createElement('div'); desc.textContent = p.description; div.append(desc);
+        const mem = document.createElement('div'); mem.className = 'muted';
+        mem.textContent = 'Membros: ' + (p.members.length ? p.members.map((m) => m.name).join(', ') : 'nenhum');
+        div.append(mem);
+        list.append(div);
+      }
+    }
+
+    $('btn-login').onclick = login;
+    $('password').addEventListener('keydown', (e) => e.key === 'Enter' && login());
+    $('logout').onclick = logout;
+
+    if (S.token) boot().catch(() => logout());
+  </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "appsec-learning",
+  "version": "1.0.0",
+  "description": "API REST simples (CRUD) para estudos de AppSec",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "start:wsl": "HOST=0.0.0.0 node src/server.js",
+    "vuln": "node app-vuln/server.js",
+    "vuln:wsl": "HOST=0.0.0.0 node app-vuln/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.22.3",
+    "mysql2": "^3.24.6"
+  }
+}

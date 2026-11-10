@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gestão Corporativa</title>
+  <style>
+    :root { --bg:#eef1f6; --card:#fff; --line:#e2e6ec; --brand:#2a5bd7; --muted:#6b7280; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { font-family: system-ui, sans-serif; margin: 0; background: var(--bg); color: #1f2430; }
+    header { background: var(--brand); color: #fff; padding: .8rem 1.2rem; display: flex; align-items: center; gap: 1rem; }
+    header h1 { font-size: 1.1rem; margin: 0; flex: 1; }
+    header button { background: rgba(255,255,255,.2); color:#fff; border:0; padding:.4rem .7rem; border-radius:6px; cursor:pointer; }
+    main { max-width: 960px; margin: 1.2rem auto; padding: 0 1rem; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 1.2rem 1.4rem; margin-bottom: 1.2rem; }
+    h2 { font-size: 1rem; margin: 0 0 .8rem; }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    th, td { text-align: left; padding: .5rem .4rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; }
+    .muted { color: var(--muted); font-size: .82rem; }
+    label { display:block; font-size:.82rem; margin:.6rem 0 .25rem; color: var(--muted); }
+    input, select, textarea { width: 100%; padding: .6rem .7rem; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+    input:focus, textarea:focus { outline: 2px solid var(--brand); outline-offset: 0; border-color: var(--brand); }
+    button.primary { background: var(--brand); color:#fff; border:0; padding:.65rem 1rem; border-radius:8px; cursor:pointer; font: inherit; }
+    .hidden { display:none; }
+    .row { display:flex; gap:.5rem; }
+    .project { border:1px solid var(--line); border-radius:8px; padding:.8rem; margin-bottom:.7rem; }
+    .project h3 { margin:0 0 .2rem; font-size:.95rem; }
+
+    /* ---- Login centralizado ---- */
+    #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+    #login { width: 100%; max-width: 380px; margin: 0; box-shadow: 0 10px 30px rgba(20,30,60,.08); }
+    #login h2 { text-align: center; font-size: 1.25rem; margin-bottom: .3rem; }
+    #login .sub { text-align: center; color: var(--muted); font-size: .85rem; margin: 0 0 1rem; }
+    #login .primary { width: 100%; margin-top: 1rem; }
+    .pw { position: relative; }
+    .pw input { padding-right: 5.2rem; }
+    .pw .toggle { position: absolute; right: .5rem; top: 50%; transform: translateY(-50%);
+      border: 0; background: transparent; color: var(--brand); cursor: pointer; font-size: .8rem; font-weight: 600; padding: .2rem .3rem; }
+    #error { color:#b00020; font-size:.85rem; min-height:1.1rem; text-align:center; margin:.6rem 0 0; }
+  </style>
+</head>
+<body>
+  <header class="hidden" id="topbar">
+    <h1>Gestão Corporativa</h1>
+    <span id="who" class="muted" style="color:#fff"></span>
+    <button id="logout">Sair</button>
+  </header>
+
+  <!-- Login (centralizado, sem banner de contas) -->
+  <div id="login-screen">
+    <div class="card" id="login">
+      <h2>Gestão Corporativa</h2>
+      <p class="sub">Acesse sua conta</p>
+      <label for="email">E-mail</label>
+      <input id="email" type="text" autocomplete="username" placeholder="seu e-mail">
+      <label for="password">Senha</label>
+      <div class="pw">
+        <input id="password" type="password" autocomplete="current-password" placeholder="sua senha">
+        <button type="button" class="toggle" id="toggle-pw" aria-label="Mostrar senha">Mostrar</button>
+      </div>
+      <button class="primary" id="btn-login">Entrar</button>
+      <p id="error"></p>
+    </div>
+  </div>
+
+  <main>
+    <div id="app" class="hidden">
+      <div class="card">
+        <h2>Buscar funcionários</h2>
+        <div class="row">
+          <input id="search" placeholder="nome ou bio...">
+          <button class="primary" id="btn-search">Buscar</button>
+        </div>
+        <p id="search-info" class="muted"></p>
+      </div>
+
+      <div class="card">
+        <h2>Funcionários</h2>
+        <table><thead><tr><th>Nome</th><th>Cargo</th><th>Depto</th><th>Título</th><th>Salário</th><th>Bio</th></tr></thead>
+        <tbody id="emp-body"></tbody></table>
+      </div>
+
+      <div class="card">
+        <h2>Meu perfil</h2>
+        <label>Bio (aparece na lista de funcionários)</label>
+        <textarea id="bio" rows="2"></textarea>
+        <button class="primary" id="btn-bio" style="margin-top:.6rem">Salvar perfil</button>
+      </div>
+
+      <div class="card">
+        <h2>Projetos</h2>
+        <div id="proj-list"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const S = { token: localStorage.getItem('token') || null, me: null };
+    const $ = (id) => document.getElementById(id);
+    const money = (v) => v == null ? '—' : 'R$ ' + Number(v).toLocaleString('pt-BR');
+
+    async function api(method, url, body) {
+      const res = await fetch(url, {
+        method,
+        headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(S.token ? { Authorization: 'Bearer ' + S.token } : {}) },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || res.statusText); }
+      return res.status === 204 ? null : res.json();
+    }
+
+    // Mostrar/ocultar senha (texto, sem emoji)
+    $('toggle-pw').onclick = () => {
+      const p = $('password');
+      const show = p.type === 'password';
+      p.type = show ? 'text' : 'password';
+      $('toggle-pw').textContent = show ? 'Ocultar' : 'Mostrar';
+      $('toggle-pw').setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha');
+    };
+
+    async function login() {
+      $('error').textContent = '';
+      try {
+        const data = await api('POST', '/api/auth/login', { email: $('email').value, password: $('password').value });
+        S.token = data.token; localStorage.setItem('token', data.token);
+        await boot();
+      } catch (e) { $('error').textContent = e.message; }
+    }
+    function logout() {
+      S.token = null; S.me = null; localStorage.removeItem('token');
+      $('app').classList.add('hidden'); $('topbar').classList.add('hidden'); $('login-screen').classList.remove('hidden');
+    }
+
+    async function boot() {
+      S.me = await api('GET', '/api/auth/me');
+      $('login-screen').classList.add('hidden'); $('app').classList.remove('hidden'); $('topbar').classList.remove('hidden');
+      $('who').textContent = `${S.me.name} · ${S.me.role}`;
+      $('bio').value = S.me.bio || '';
+      await loadEmployees(); await loadProjects();
+    }
+
+    async function loadEmployees(search) {
+      const url = '/api/employees' + (search ? '?search=' + encodeURIComponent(search) : '');
+      const rows = await api('GET', url);
+      const body = $('emp-body'); body.innerHTML = '';
+      for (const e of rows) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${e.name}</td><td>${e.role}</td><td>${e.department}</td>
+          <td>${e.title}</td><td>${money(e.salary)}</td><td>${e.bio || ''}</td>`;
+        body.append(tr);
+      }
+    }
+
+    async function loadProjects() {
+      const rows = await api('GET', '/api/projects');
+      const list = $('proj-list'); list.innerHTML = '';
+      for (const p of rows) {
+        const div = document.createElement('div'); div.className = 'project';
+        div.innerHTML = `<h3>${p.name}</h3>
+          <div class="muted">${p.status} · ${money(p.budget)} · resp. ${p.manager ? p.manager.name : '—'}</div>
+          <div>${p.description}</div>
+          <div class="muted">Membros: ${p.members.map((m) => m.name).join(', ') || 'nenhum'}</div>`;
+        list.append(div);
+      }
+    }
+
+    $('btn-login').onclick = login;
+    $('password').addEventListener('keydown', (e) => e.key === 'Enter' && login());
+    $('logout').onclick = logout;
+    $('btn-bio').onclick = () => api('PUT', '/api/employees/' + S.me.id, { bio: $('bio').value }).then(() => loadEmployees());
+    $('btn-search').onclick = () => {
+      const q = $('search').value;
+      $('search-info').innerHTML = 'Resultados para: ' + q;
+      loadEmployees(q);
+    };
+
+    if (S.token) boot().catch(logout);
+  </script>
+</body>
+</html>

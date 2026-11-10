@@ -1,0 +1,18 @@
+{
+  "_comment": "Nomes de pacotes RUINS para o guard analisar. NÃO instale nada daqui: um nome de typosquat pode resolver para malware real que está vivo no registry. Isto é DADO de entrada, não dependência.",
+  "typosquatting": [
+    { "name": "expresss",   "mimics": "express",   "note": "letra duplicada" },
+    { "name": "lodahs",     "mimics": "lodash",    "note": "letras trocadas" },
+    { "name": "reqeust",    "mimics": "request",   "note": "transposição de letras" },
+    { "name": "axioss",     "mimics": "axios",     "note": "letra extra" },
+    { "name": "crossenv",   "mimics": "cross-env", "note": "malware real de 2017 (roubava variáveis de ambiente no postinstall)" },
+    { "name": "electron-native-notify", "mimics": "(cadeia Copay)", "note": "ataque de supply chain real de 2019" }
+  ],
+  "hallucinated": [
+    { "name": "fast-json-validator-pro",  "note": "nome plausível que uma IA inventaria; não existe no registry (slopsquatting)" },
+    { "name": "react-secure-storage-lite", "note": "não existe; alvo típico de slopsquatting" },
+    { "name": "express-auth-guard",        "note": "não existe; soa como middleware real" },
+    { "name": "openai-helper-sdk",         "note": "não existe; SDKs alucinados são alvo comum" },
+    { "name": "node-safe-eval-plus",       "note": "não existe; nome sugere falsa segurança" }
+  ]
+}
